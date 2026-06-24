@@ -10,7 +10,7 @@
 /*/out/
 
 # Uploaded files
-/*/uploads/
+/*/uploads/*
 
 # Environment
 .env

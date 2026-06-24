@@ -45,7 +45,8 @@ def _get_current_df() -> pd.DataFrame:
     """Return the currently loaded DataFrame, or raise 400 if none loaded."""
     global _current_df
     if _current_df is None:
-        raise HTTPException(status_code=400, detail="No file uploaded yet. Please upload a .feather file first.")
+        raise HTTPException(
+            status_code=400, detail="No file uploaded yet. Please upload a .feather file first.")
     return _current_df
 
 
@@ -78,8 +79,6 @@ def _df_to_records(df: pd.DataFrame) -> list[dict]:
     return records
 
 
-# ── Upload Endpoint ──────────────────────────────────────────────────────────
-
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
     """
@@ -92,7 +91,8 @@ async def upload_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="No file provided.")
 
     if not file.filename.endswith(".feather"):
-        raise HTTPException(status_code=400, detail="Invalid file format. Only .feather files are accepted.")
+        raise HTTPException(
+            status_code=400, detail="Invalid file format. Only .feather files are accepted.")
 
     # Save the uploaded file
     file_path = UPLOAD_DIR / file.filename
@@ -100,7 +100,8 @@ async def upload_file(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to save file: {str(e)}")
 
     # Validate and load with PyArrow
     try:
@@ -108,7 +109,8 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         # Clean up invalid file
         file_path.unlink(missing_ok=True)
-        raise HTTPException(status_code=400, detail=f"Invalid Feather file: {str(e)}")
+        raise HTTPException(
+            status_code=400, detail=f"Invalid Feather file: {str(e)}")
 
     # Validate expected columns
     required_columns = {"instrument_type", "expiry", "strike", "name"}
@@ -129,8 +131,6 @@ async def upload_file(file: UploadFile = File(...)):
         "filename": file.filename,
     }
 
-
-# ── Metadata Endpoint ────────────────────────────────────────────────────────
 
 @app.get("/metadata")
 async def get_metadata():
@@ -193,8 +193,6 @@ async def get_metadata():
     }
 
 
-# ── Filter Endpoint ──────────────────────────────────────────────────────────
-
 class FilterRequest(BaseModel):
     instrument: Optional[str] = None
     expiry: Optional[str] = None
@@ -224,10 +222,12 @@ async def filter_data(req: FilterRequest):
             expiry_date = pd.to_datetime(req.expiry).date()
             # Handle both date and datetime.date expiry columns
             filtered = filtered[filtered["expiry"].apply(
-                lambda x: x == expiry_date if isinstance(x, date) else pd.to_datetime(x).date() == expiry_date
+                lambda x: x == expiry_date if isinstance(
+                    x, date) else pd.to_datetime(x).date() == expiry_date
             )]
         except (ValueError, TypeError):
-            raise HTTPException(status_code=400, detail=f"Invalid expiry date format: {req.expiry}")
+            raise HTTPException(
+                status_code=400, detail=f"Invalid expiry date format: {req.expiry}")
 
     if req.strike is not None:
         filtered = filtered[filtered["strike"] == req.strike]
@@ -256,8 +256,6 @@ async def filter_data(req: FilterRequest):
     }
 
 
-# ── Preview Endpoint ─────────────────────────────────────────────────────────
-
 @app.get("/preview")
 async def preview_data(
     page: int = Query(1, ge=1),
@@ -279,7 +277,8 @@ async def preview_data(
         str_cols = result.select_dtypes(include=["object"]).columns
         mask = pd.Series(False, index=result.index)
         for col in str_cols:
-            mask = mask | result[col].astype(str).str.lower().str.contains(search_lower, na=False)
+            mask = mask | result[col].astype(
+                str).str.lower().str.contains(search_lower, na=False)
         result = result[mask]
 
     total = len(result)
@@ -302,8 +301,6 @@ async def preview_data(
         "total_pages": max(1, (total + page_size - 1) // page_size),
     }
 
-
-# ── Health Check ─────────────────────────────────────────────────────────────
 
 @app.get("/health")
 async def health():
