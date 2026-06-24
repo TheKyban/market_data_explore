@@ -197,10 +197,17 @@ bun test
 
 ## What This Project Demonstrates
 
-- **API Design**: RESTful endpoints with clear request/response contracts
 - **Data Handling**: Efficient Feather file I/O with Pandas/PyArrow
 - **React Fundamentals**: Component composition, state management, typed props
 - **File Upload Workflows**: Drag-and-drop, validation, progress tracking
 - **Financial Data Understanding**: Instrument-specific filtering (CE/PE/FUT expiries differ)
 - **Code Organization**: Clean separation of concerns across three services
 - **Modern UI/UX**: Dark theme, glassmorphism, micro-animations, responsive layout
+
+## Screenshots
+
+### Main Dashboard & Charting
+![Market Data Dashboard](docs/dashboard.png)
+
+### Clean UI & Tables
+![Market Data Explorer Landing](docs/landing.png)

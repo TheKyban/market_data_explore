@@ -369,6 +369,8 @@ export default function DataTable({
                     <PaginationLink
                       href="#"
                       isActive={data.page === item}
+                      size="default"
+                      className="min-w-8 px-2 justify-center"
                       onClick={(e) => {
                         e.preventDefault();
                         if (data.page !== item) {
