@@ -16,7 +16,10 @@ const app = express();
 const PORT = parseInt(process.env.GATEWAY_PORT || "4000", 10);
 const PYTHON_SERVICE_URL = process.env.PYTHON_SERVICE_URL || "http://localhost:8000";
 
-// Middleware
+/**
+ * Middleware  
+ */
+
 app.use(cors());
 app.use(express.json());
 
