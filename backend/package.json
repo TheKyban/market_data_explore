@@ -8,17 +8,15 @@
     "test": "bun test"
   },
   "dependencies": {
-    "express": "^5.1.0",
+    "@types/http-proxy-middleware": "^1.0.0",
     "cors": "^2.8.5",
-    "multer": "^1.4.5-lts.2",
-    "axios": "^1.9.0",
-    "form-data": "^4.0.2"
+    "express": "^5.1.0",
+    "http-proxy-middleware": "^4.1.1"
   },
   "devDependencies": {
-    "@types/express": "^5.0.2",
+    "@types/bun": "latest",
     "@types/cors": "^2.8.19",
-    "@types/multer": "^1.4.12",
-    "typescript": "^5.8.3",
-    "@types/bun": "latest"
+    "@types/express": "^5.0.2",
+    "typescript": "^5.8.3"
   }
 }
