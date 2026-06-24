@@ -1,16 +1,9 @@
 "use client";
 
 import { useState, useCallback, useRef } from "react";
-import {
-  Box,
-  Typography,
-  LinearProgress,
-  Alert,
-  Chip,
-} from "@mui/material";
-import CloudUploadIcon from "@mui/icons-material/CloudUpload";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
-import InsertDriveFileIcon from "@mui/icons-material/InsertDriveFile";
+import { CloudUpload, CheckCircle2, FileText, XCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 import { uploadFile } from "@/lib/api";
 
 interface FileUploadProps {
@@ -60,7 +53,6 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
       } catch (err: unknown) {
         const errorMessage =
           err instanceof Error ? err.message : "Upload failed. Please try again.";
-        // Try to extract detail from axios error
         if (typeof err === "object" && err !== null && "response" in err) {
           const axiosErr = err as { response?: { data?: { detail?: string } } };
           setError(axiosErr.response?.data?.detail || errorMessage);
@@ -101,112 +93,90 @@ export default function FileUpload({ onUploadSuccess }: FileUploadProps) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) handleUpload(file);
-    // Reset so the same file can be re-selected
     e.target.value = "";
   };
 
   return (
-    <Box className="animate-fade-in-up" id="file-upload-section">
-      <Typography variant="subtitle2" sx={{ mb: 1 }}>
-        Upload Data
-      </Typography>
+    <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <h3 className="font-semibold text-sm text-foreground mb-1">Upload Data</h3>
 
-      <Box
-        className={`upload-zone ${isDragOver ? "drag-over" : ""} ${
-          uploadedFile ? "uploaded" : ""
+      <div
+        className={`relative flex flex-col items-center justify-center p-6 border-2 border-dashed rounded-xl text-center cursor-pointer transition-all duration-300 ${
+          isDragOver
+            ? "border-blue-500 bg-blue-500/10 shadow-[0_0_20px_rgba(59,130,246,0.15)]"
+            : uploadedFile
+            ? "border-emerald-500/50 bg-emerald-500/5 hover:bg-emerald-500/10 hover:border-emerald-500"
+            : "border-border/60 bg-card/30 hover:border-blue-500/50 hover:bg-blue-500/5"
         }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleClick}
-        id="upload-dropzone"
       >
         <input
           ref={fileInputRef}
           type="file"
           accept=".feather"
           onChange={handleFileChange}
-          style={{ display: "none" }}
-          id="file-input"
+          className="hidden"
         />
 
         {uploadedFile ? (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-            <CheckCircleIcon sx={{ fontSize: 32, color: "secondary.main" }} />
-            <Typography variant="body2" sx={{ fontWeight: 600, color: "secondary.main" }}>
+          <div className="flex flex-col items-center gap-2">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+            <p className="text-sm font-semibold text-emerald-500">
               File uploaded successfully
-            </Typography>
-            <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", justifyContent: "center" }}>
-              <Chip
-                icon={<InsertDriveFileIcon sx={{ fontSize: 14 }} />}
-                label={uploadedFile.name}
-                size="small"
-                variant="outlined"
-                sx={{ borderColor: "rgba(16, 185, 129, 0.3)", color: "text.secondary" }}
-              />
-              <Chip
-                label={`${uploadedFile.rows.toLocaleString()} rows`}
-                size="small"
-                color="secondary"
-                variant="outlined"
-              />
-            </Box>
-            <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+            </p>
+            <div className="flex flex-wrap gap-2 justify-center mt-1">
+              <Badge variant="outline" className="gap-1 border-emerald-500/30 text-muted-foreground font-normal">
+                <FileText className="h-3 w-3" />
+                {uploadedFile.name}
+              </Badge>
+              <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20">
+                {uploadedFile.rows.toLocaleString()} rows
+              </Badge>
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-2">
               Click or drag to upload a different file
-            </Typography>
-          </Box>
+            </p>
+          </div>
         ) : (
-          <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 1 }}>
-            <CloudUploadIcon
-              sx={{
-                fontSize: 36,
-                color: isDragOver ? "primary.main" : "text.secondary",
-                transition: "color 0.2s",
-              }}
+          <div className="flex flex-col items-center gap-2">
+            <CloudUpload
+              className={`h-10 w-10 transition-colors duration-300 ${
+                isDragOver ? "text-blue-500" : "text-muted-foreground/60"
+              }`}
             />
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            <p className="text-sm font-medium text-foreground">
               {isDragOver ? "Drop your file here" : "Drag & drop a .feather file"}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
+            </p>
+            <p className="text-xs text-muted-foreground">
               or click to browse (max 100 MB)
-            </Typography>
-          </Box>
+            </p>
+          </div>
         )}
-      </Box>
+      </div>
 
-      {/* Upload progress */}
       {uploading && (
-        <Box sx={{ mt: 1.5 }}>
-          <LinearProgress
-            variant="determinate"
-            value={progress}
-            sx={{
-              borderRadius: 4,
-              height: 6,
-              backgroundColor: "rgba(59, 130, 246, 0.1)",
-              "& .MuiLinearProgress-bar": {
-                background: "linear-gradient(90deg, #3b82f6, #60a5fa)",
-                borderRadius: 4,
-              },
-            }}
-          />
-          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5 }}>
+        <div className="mt-2 space-y-1.5">
+          <Progress value={progress} className="h-1.5" />
+          <p className="text-xs text-muted-foreground text-center">
             Uploading... {progress}%
-          </Typography>
-        </Box>
+          </p>
+        </div>
       )}
 
-      {/* Error message */}
       {error && (
-        <Alert
-          severity="error"
-          sx={{ mt: 1.5, borderRadius: 2 }}
-          onClose={() => setError(null)}
-          id="upload-error"
-        >
-          {error}
-        </Alert>
+        <div className="mt-2 flex items-start gap-2 p-3 rounded-lg border border-destructive/50 bg-destructive/10 text-destructive text-sm relative">
+          <button 
+            onClick={() => setError(null)}
+            className="absolute top-2 right-2 text-destructive/70 hover:text-destructive"
+          >
+            <XCircle className="h-4 w-4" />
+          </button>
+          <div className="pr-6">{error}</div>
+        </div>
       )}
-    </Box>
+    </div>
   );
 }

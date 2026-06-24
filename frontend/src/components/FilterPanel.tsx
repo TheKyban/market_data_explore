@@ -1,20 +1,19 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { Filter, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
-  Box,
-  Typography,
-  FormControl,
-  InputLabel,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@/components/ui/toggle-group";
+import {
   Select,
-  MenuItem,
-  Button,
-  ToggleButtonGroup,
-  ToggleButton,
-  Tooltip,
-} from "@mui/material";
-import FilterListIcon from "@mui/icons-material/FilterList";
-import ClearIcon from "@mui/icons-material/Clear";
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import type { Metadata, FilterState } from "@/types";
 
 interface FilterPanelProps {
@@ -26,53 +25,56 @@ export default function FilterPanel({
   metadata,
   onApplyFilters,
 }: FilterPanelProps) {
-  const [instrument, setInstrument] = useState<string>("");
-  const [expiry, setExpiry] = useState<string>("");
-  const [strike, setStrike] = useState<string>("");
-  const [name, setName] = useState<string>("");
+  const [instrument, setInstrument] = useState<string>("all");
+  const [expiry, setExpiry] = useState<string>("all");
+  const [strike, setStrike] = useState<string>("all");
+  const [name, setName] = useState<string>("all");
 
-  // Derived lists based on selected instrument
   const [availableExpiries, setAvailableExpiries] = useState<string[]>([]);
   const [availableStrikes, setAvailableStrikes] = useState<number[]>([]);
 
-  // Update available expiries and strikes when instrument changes
   useEffect(() => {
-    if (instrument && metadata.expiries_by_instrument[instrument]) {
-      setAvailableExpiries(metadata.expiries_by_instrument[instrument]);
+    const inst = instrument === "all" ? "" : instrument;
+    if (inst && metadata.expiries_by_instrument[inst]) {
+      setAvailableExpiries(metadata.expiries_by_instrument[inst]);
     } else {
       setAvailableExpiries(metadata.expiries);
     }
 
-    if (instrument === "FUT") {
-      // FUT has no meaningful strikes
+    if (inst === "FUT") {
       setAvailableStrikes([]);
-      setStrike("");
-    } else if (instrument && metadata.strikes_by_instrument[instrument]) {
-      setAvailableStrikes(metadata.strikes_by_instrument[instrument]);
+      setStrike("all");
+    } else if (inst && metadata.strikes_by_instrument[inst]) {
+      setAvailableStrikes(metadata.strikes_by_instrument[inst]);
     } else {
       setAvailableStrikes(metadata.strikes);
     }
 
-    // Reset expiry and strike when instrument changes
-    setExpiry("");
-    setStrike("");
+    setExpiry("all");
+    setStrike("all");
   }, [instrument, metadata]);
 
   const handleApply = useCallback(() => {
-    onApplyFilters({ instrument, expiry, strike, name });
+    onApplyFilters({
+      instrument: instrument === "all" ? "" : instrument,
+      expiry: expiry === "all" ? "" : expiry,
+      strike: strike === "all" ? "" : strike,
+      name: name === "all" ? "" : name,
+    });
   }, [instrument, expiry, strike, name, onApplyFilters]);
 
   const handleClear = useCallback(() => {
-    setInstrument("");
-    setExpiry("");
-    setStrike("");
-    setName("");
+    setInstrument("all");
+    setExpiry("all");
+    setStrike("all");
+    setName("all");
     onApplyFilters({ instrument: "", expiry: "", strike: "", name: "" });
   }, [onApplyFilters]);
 
-  const hasFilters = instrument || expiry || strike || name;
+  const hasFilters = instrument !== "all" || expiry !== "all" || strike !== "all" || name !== "all";
 
   const formatExpiry = (exp: string) => {
+    if (exp === "all") return "All Expiries";
     try {
       const d = new Date(exp + "T00:00:00");
       return d.toLocaleDateString("en-IN", {
@@ -86,163 +88,106 @@ export default function FilterPanel({
   };
 
   return (
-    <Box className="animate-fade-in-up" id="filter-panel" sx={{ animationDelay: "0.1s" }}>
-      <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-        Filters
-      </Typography>
+    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+      <h3 className="font-semibold text-sm text-foreground">Filters</h3>
 
-      {/* Instrument Type Toggle */}
-      <Box sx={{ mb: 4 }}>
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ mb: 0.5, display: "block" }}
-        >
-          Instrument Type
-        </Typography>
-        <ToggleButtonGroup
-          value={instrument}
-          exclusive
-          onChange={(_e, val) => {
-            if (val !== null) setInstrument(val);
-            else setInstrument("");
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground font-medium">Instrument Type</label>
+        <ToggleGroup
+          value={[instrument]}
+          onValueChange={(val) => {
+            const newVal = val[0];
+            if (newVal) setInstrument(newVal);
+            else setInstrument("all");
           }}
-          size="small"
-          fullWidth
-          id="instrument-toggle"
-          sx={{
-            "& .MuiToggleButton-root": {
-              borderColor: "rgba(148, 163, 184, 0.15)",
-              color: "text.secondary",
-              fontWeight: 600,
-              fontSize: "0.8rem",
-              py: 0.8,
-              "&.Mui-selected": {
-                borderColor: "primary.main",
-                "&.ce-btn": {
-                  backgroundColor: "rgba(16, 185, 129, 0.12)",
-                  color: "#34d399",
-                  borderColor: "rgba(16, 185, 129, 0.3)",
-                },
-                "&.pe-btn": {
-                  backgroundColor: "rgba(239, 68, 68, 0.12)",
-                  color: "#f87171",
-                  borderColor: "rgba(239, 68, 68, 0.3)",
-                },
-                "&.fut-btn": {
-                  backgroundColor: "rgba(59, 130, 246, 0.12)",
-                  color: "#60a5fa",
-                  borderColor: "rgba(59, 130, 246, 0.3)",
-                },
-              },
-            },
-          }}
+          className="justify-start w-full"
         >
-          <ToggleButton value="CE" className="ce-btn" id="filter-ce">
+          <ToggleGroupItem value="CE" className="flex-1 data-[state=on]:bg-emerald-500/20 data-[state=on]:text-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-400">
             CE
-          </ToggleButton>
-          <ToggleButton value="PE" className="pe-btn" id="filter-pe">
+          </ToggleGroupItem>
+          <ToggleGroupItem value="PE" className="flex-1 data-[state=on]:bg-rose-500/20 data-[state=on]:text-rose-500 hover:bg-rose-500/10 hover:text-rose-400">
             PE
-          </ToggleButton>
-          <ToggleButton value="FUT" className="fut-btn" id="filter-fut">
+          </ToggleGroupItem>
+          <ToggleGroupItem value="FUT" className="flex-1 data-[state=on]:bg-blue-500/20 data-[state=on]:text-blue-500 hover:bg-blue-500/10 hover:text-blue-400">
             FUT
-          </ToggleButton>
-        </ToggleButtonGroup>
-      </Box>
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
-      {/* Symbol/Name */}
-      <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-        <InputLabel id="name-select-label">Symbol</InputLabel>
-        <Select
-          labelId="name-select-label"
-          value={name}
-          label="Symbol"
-          onChange={(e) => setName(e.target.value)}
-          id="name-select"
-        >
-          <MenuItem value="">
-            <em>All Symbols</em>
-          </MenuItem>
-          {metadata.names.map((n) => (
-            <MenuItem key={n} value={n}>
-              {n}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* Expiry */}
-      <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-        <InputLabel id="expiry-select-label">Expiry</InputLabel>
-        <Select
-          labelId="expiry-select-label"
-          value={expiry}
-          label="Expiry"
-          onChange={(e) => setExpiry(e.target.value)}
-          id="expiry-select"
-          MenuProps={{ slotProps: { paper: { sx: { maxHeight: 300 } } } }}
-        >
-          <MenuItem value="">
-            <em>All Expiries</em>
-          </MenuItem>
-          {availableExpiries.map((exp) => (
-            <MenuItem key={exp} value={exp}>
-              {formatExpiry(exp)}
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {/* Strike (hidden for FUT) */}
-      {instrument !== "FUT" && (
-        <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-          <InputLabel id="strike-select-label">Strike</InputLabel>
-          <Select
-            labelId="strike-select-label"
-            value={strike}
-            label="Strike"
-            onChange={(e) => setStrike(e.target.value)}
-            id="strike-select"
-            MenuProps={{ slotProps: { paper: { sx: { maxHeight: 300 } } } }}
-          >
-            <MenuItem value="">
-              <em>All Strikes</em>
-            </MenuItem>
-            {availableStrikes.map((s) => (
-              <MenuItem key={s} value={String(s)}>
-                {s.toLocaleString()}
-              </MenuItem>
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground font-medium">Symbol</label>
+        <Select value={name} onValueChange={(val) => val && setName(val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="All Symbols">
+              {name === "all" ? "All Symbols" : name}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Symbols</SelectItem>
+            {metadata?.names.map((n) => (
+              <SelectItem key={n} value={n}>
+                {n}
+              </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label className="text-xs text-muted-foreground font-medium">Expiry</label>
+        <Select value={expiry} onValueChange={(val) => val && setExpiry(val)}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder="All Expiries">
+              {expiry === "all" ? "All Expiries" : formatExpiry(expiry)}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Expiries</SelectItem>
+            {availableExpiries.map((e) => (
+              <SelectItem key={e} value={e}>
+                {formatExpiry(e)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {instrument !== "fut" && (
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs text-muted-foreground font-medium">Strike</label>
+          <Select value={strike} onValueChange={(val) => val && setStrike(val)}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="All Strikes">
+                {strike === "all" ? "All Strikes" : Number(strike).toLocaleString()}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Strikes</SelectItem>
+              {availableStrikes.map((s) => (
+                <SelectItem key={s} value={s.toString()}>
+                  {s.toLocaleString()}
+                </SelectItem>
+              ))}
+            </SelectContent>
           </Select>
-        </FormControl>
+        </div>
       )}
 
-      {/* Action buttons */}
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <Button
-          variant="contained"
-          onClick={handleApply}
-          startIcon={<FilterListIcon />}
-          fullWidth
-          id="apply-filters-btn"
-          sx={{ py: 1 }}
-        >
+      <div className="flex gap-2 pt-2">
+        <Button onClick={handleApply} className="flex-1" variant="default">
+          <Filter className="mr-2 h-4 w-4" />
           Apply Filters
         </Button>
-        <Tooltip title="Clear all filters">
-          <span>
-            <Button
-              variant="outlined"
-              onClick={handleClear}
-              disabled={!hasFilters}
-              id="clear-filters-btn"
-              sx={{ minWidth: 44, px: 1 }}
-            >
-              <ClearIcon />
-            </Button>
-          </span>
-        </Tooltip>
-      </Box>
-    </Box>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleClear}
+          disabled={!hasFilters}
+          title="Clear all filters"
+        >
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -1,20 +1,15 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { Menu, LineChart, Database } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
-  AppBar,
-  Toolbar,
-  Typography,
-  Box,
-  Chip,
-  useMediaQuery,
-  useTheme,
-  IconButton,
-  Drawer,
-} from "@mui/material";
-import MenuIcon from "@mui/icons-material/Menu";
-import ShowChartIcon from "@mui/icons-material/ShowChart";
-import StorageIcon from "@mui/icons-material/Storage";
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import FileUpload from "@/components/FileUpload";
 import FilterPanel from "@/components/FilterPanel";
 import ContractSummary from "@/components/ContractSummary";
@@ -27,9 +22,6 @@ import type {
 import { getMetadata, filterData, getPreview } from "@/lib/api";
 
 export default function HomePage() {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("lg"));
-
   const [fileUploaded, setFileUploaded] = useState(false);
   const [rowCount, setRowCount] = useState(0);
   const [fileName, setFileName] = useState("");
@@ -42,7 +34,6 @@ export default function HomePage() {
     strike: "",
     name: "",
   });
-  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Check for existing session/uploaded file on mount
   useEffect(() => {
@@ -50,7 +41,6 @@ export default function HomePage() {
     const checkExistingSession = async () => {
       try {
         setLoading(true);
-        // Attempt to fetch metadata; if it fails, no file is loaded.
         const meta = await getMetadata();
         if (isMounted && meta && meta.total_rows > 0) {
           setFileName(meta.filename || "Previous Upload");
@@ -176,7 +166,7 @@ export default function HomePage() {
 
   // Sidebar content
   const sidebarContent = (
-    <Box sx={{ p: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+    <div className="flex flex-col gap-4 p-4">
       <FileUpload onUploadSuccess={handleUploadSuccess} />
       {metadata && (
         <>
@@ -187,125 +177,81 @@ export default function HomePage() {
           <ContractSummary metadata={metadata} />
         </>
       )}
-    </Box>
+    </div>
   );
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
-      {/* ── App Bar ────────────────────────────────────────────────────── */}
-      <AppBar position="sticky" id="app-bar">
-        <Toolbar>
-          {isMobile && (
-            <IconButton
-              edge="start"
-              color="inherit"
-              onClick={() => setDrawerOpen(true)}
-              sx={{ mr: 1 }}
-              id="menu-toggle"
-            >
-              <MenuIcon />
-            </IconButton>
-          )}
-          <ShowChartIcon sx={{ mr: 1.5, color: "primary.main" }} />
-          <Typography
-            variant="h6"
-            sx={{
-              flexGrow: 1,
-              fontWeight: 700,
-              background: "linear-gradient(135deg, #60a5fa, #3b82f6)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            Market Data Explorer
-          </Typography>
+    <div className="flex min-h-screen flex-col bg-background">
+      {/* App Bar */}
+      <header className="sticky top-0 z-50 flex h-16 items-center border-b border-border/40 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="flex flex-1 items-center gap-4">
+          {/* Mobile Menu */}
+          <div className="lg:hidden">
+            <Sheet>
+              <SheetTrigger
+                render={
+                  <Button variant="ghost" size="icon" className="-ml-2">
+                    <Menu className="h-5 w-5" />
+                    <span className="sr-only">Toggle menu</span>
+                  </Button>
+                }
+              />
+              <SheetContent side="left" className="w-[340px] p-0">
+                <ScrollArea className="h-full">
+                  {sidebarContent}
+                </ScrollArea>
+              </SheetContent>
+            </Sheet>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <LineChart className="h-6 w-6 text-primary" />
+            <h1 className="bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-lg font-bold text-transparent sm:text-xl">
+              Market Data Explorer
+            </h1>
+          </div>
+
           {fileUploaded && (
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Chip
-                icon={<StorageIcon sx={{ fontSize: 16 }} />}
-                label={`${rowCount.toLocaleString()} rows`}
-                size="small"
-                color="primary"
-                variant="outlined"
-                id="row-count-badge"
-              />
-              <Chip
-                label={fileName}
-                size="small"
-                variant="outlined"
-                sx={{ color: "text.secondary", borderColor: "divider" }}
-                id="filename-badge"
-              />
-            </Box>
+            <div className="ml-auto hidden items-center gap-2 sm:flex">
+              <Badge variant="outline" className="gap-1 border-primary/20 text-primary">
+                <Database className="h-3 w-3" />
+                {rowCount.toLocaleString()} rows
+              </Badge>
+              <Badge variant="outline" className="text-muted-foreground">
+                {fileName}
+              </Badge>
+            </div>
           )}
-        </Toolbar>
-      </AppBar>
+        </div>
+      </header>
 
-      {/* ── Main Layout ────────────────────────────────────────────────── */}
-      <Box sx={{ display: "flex", flex: 1 }}>
+      {/* Main Layout */}
+      <div className="flex flex-1 overflow-hidden">
         {/* Desktop Sidebar */}
-        {!isMobile && (
-          <Box className="sidebar" id="sidebar">
+        <aside className="hidden w-[340px] shrink-0 border-r border-border/40 bg-card/30 backdrop-blur-md lg:block">
+          <ScrollArea className="h-[calc(100vh-4rem)]">
             {sidebarContent}
-          </Box>
-        )}
-
-        {/* Mobile Drawer */}
-        {isMobile && (
-          <Drawer
-            open={drawerOpen}
-            onClose={() => setDrawerOpen(false)}
-            slotProps={{
-              paper: {
-                sx: {
-                  width: 340,
-                  background: "var(--bg-primary)",
-                  borderRight: "1px solid var(--border-subtle)",
-                },
-              },
-            }}
-          >
-            {sidebarContent}
-          </Drawer>
-        )}
+          </ScrollArea>
+        </aside>
 
         {/* Main Content */}
-        <Box
-          sx={{
-            flex: 1,
-            p: 2,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-          id="main-content"
-        >
+        <main className="flex flex-1 flex-col overflow-hidden p-4">
           {!fileUploaded ? (
-            <Box
-              sx={{
-                flex: 1,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 3,
-                opacity: 0.7,
-              }}
-            >
-              <ShowChartIcon sx={{ fontSize: 80, color: "primary.dark" }} />
-              <Typography variant="h5" color="text.secondary">
-                Upload a Feather file to get started
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Supports .feather files containing derivative market data
-                (CE/PE/FUT)
-              </Typography>
-              {isMobile && (
-                <Typography variant="body2" color="primary.main">
+            <div className="flex flex-1 flex-col items-center justify-center gap-6 opacity-70 animate-in fade-in zoom-in duration-500">
+              <LineChart className="h-20 w-20 text-primary/50" />
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-semibold text-muted-foreground">
+                  Upload a Feather file to get started
+                </h2>
+                <p className="text-sm text-muted-foreground/80">
+                  Supports .feather files containing derivative market data
+                  (CE/PE/FUT)
+                </p>
+                <p className="text-sm text-primary lg:hidden mt-4">
                   Tap the menu icon to open the upload panel →
-                </Typography>
-              )}
-            </Box>
+                </p>
+              </div>
+            </div>
           ) : (
             <DataTable
               data={tableData}
@@ -313,8 +259,8 @@ export default function HomePage() {
               onPageChange={handlePageChange}
             />
           )}
-        </Box>
-      </Box>
-    </Box>
+        </main>
+      </div>
+    </div>
   );
 }

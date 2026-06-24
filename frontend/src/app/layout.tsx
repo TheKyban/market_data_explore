@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { ThemeProviderWrapper } from "@/components/ThemeProviderWrapper";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Market Data Explorer — Derivatives Analytics",
@@ -14,9 +17,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body>
-        <ThemeProviderWrapper>{children}</ThemeProviderWrapper>
+    <html lang="en" className={cn("dark", "font-sans", geist.variable)}>
+      <body className="min-h-screen bg-background font-sans antialiased text-foreground">
+        {children}
       </body>
     </html>
   );

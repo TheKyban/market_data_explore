@@ -1,21 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { TrendingUp, CalendarDays, Tags } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
-  Box,
-  Typography,
-  Card,
-  CardContent,
-  Collapse,
-  Chip,
-  IconButton,
-  Divider,
-} from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
-import TrendingUpIcon from "@mui/icons-material/TrendingUp";
-import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
-import TagIcon from "@mui/icons-material/Tag";
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Separator } from "@/components/ui/separator";
 import type { Metadata } from "@/types";
 
 interface ContractSummaryProps {
@@ -23,9 +17,6 @@ interface ContractSummaryProps {
 }
 
 export default function ContractSummary({ metadata }: ContractSummaryProps) {
-  const [expiriesOpen, setExpiriesOpen] = useState(false);
-  const [strikesOpen, setStrikesOpen] = useState(false);
-
   const formatExpiry = (exp: string) => {
     try {
       const d = new Date(exp + "T00:00:00");
@@ -45,213 +36,148 @@ export default function ContractSummary({ metadata }: ContractSummaryProps) {
   );
 
   return (
-    <Box className="animate-fade-in-up" id="contract-summary" sx={{ animationDelay: "0.2s" }}>
-      <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
-        Contract Summary
-      </Typography>
+    <div className="flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150">
+      <h3 className="font-semibold text-sm text-foreground">Contract Summary</h3>
 
       {/* Row count */}
-      <Card sx={{ mb: 1.5 }}>
-        <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
-          <Typography variant="caption" color="text.secondary">
-            Total Records
-          </Typography>
-          <Typography className="stat-value animate-count-up" id="total-rows">
+      <Card className="bg-blue-500/5 border-blue-500/20">
+        <CardContent className="p-4">
+          <p className="text-xs text-muted-foreground font-medium mb-1">Total Records</p>
+          <p className="text-3xl font-bold bg-gradient-to-br from-blue-400 to-blue-600 bg-clip-text text-transparent">
             {metadata.total_rows.toLocaleString()}
-          </Typography>
+          </p>
         </CardContent>
       </Card>
 
       {/* Contract counts by instrument */}
-      <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 1, mb: 1.5 }}>
+      <div className="grid grid-cols-3 gap-2">
         {(["CE", "PE", "FUT"] as const).map((inst) => {
           const colorClass =
-            inst === "CE" ? "emerald" : inst === "PE" ? "rose" : "";
+            inst === "CE"
+              ? "from-emerald-400 to-emerald-600"
+              : inst === "PE"
+              ? "from-rose-400 to-rose-600"
+              : "from-blue-400 to-blue-600";
           const count = metadata.contract_counts[inst] || 0;
           return (
-            <Card key={inst} id={`count-${inst.toLowerCase()}`}>
-              <CardContent
-                sx={{ py: 1.5, px: 1.5, "&:last-child": { pb: 1.5 }, textAlign: "center" }}
-              >
-                <Box sx={{ display: "flex", justifyContent: "center", mb: 0.5 }}>
-                  <span
-                    className={`instrument-badge ${inst.toLowerCase()}`}
-                  >
-                    {inst}
-                  </span>
-                </Box>
-                <Typography
-                  className={`stat-value ${colorClass}`}
-                  sx={{ fontSize: "1.2rem !important" }}
+            <Card key={inst} className="bg-card/50">
+              <CardContent className="p-3 text-center flex flex-col items-center justify-center">
+                <Badge
+                  variant="outline"
+                  className={`mb-2 ${
+                    inst === "CE"
+                      ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                      : inst === "PE"
+                      ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                      : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                  }`}
                 >
+                  {inst}
+                </Badge>
+                <p className={`text-xl font-bold bg-gradient-to-br ${colorClass} bg-clip-text text-transparent`}>
                   {count.toLocaleString()}
-                </Typography>
+                </p>
               </CardContent>
             </Card>
           );
         })}
-      </Box>
+      </div>
 
       {/* Symbols */}
-      <Card sx={{ mb: 1.5 }}>
-        <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-            <TrendingUpIcon sx={{ fontSize: 16, color: "primary.main" }} />
-            <Typography variant="caption" color="text.secondary">
+      <Card className="bg-card/50">
+        <CardContent className="p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            <p className="text-xs font-medium text-muted-foreground">
               Symbols ({metadata.names.length})
-            </Typography>
-          </Box>
-          <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-1.5">
             {metadata.names.map((name) => (
-              <Chip
-                key={name}
-                label={name}
-                size="small"
-                variant="outlined"
-                sx={{
-                  fontSize: "0.7rem",
-                  height: 24,
-                  borderColor: "rgba(59, 130, 246, 0.2)",
-                  color: "text.secondary",
-                }}
-              />
+              <Badge key={name} variant="secondary" className="font-normal text-[11px] px-2 py-0 h-6">
+                {name}
+              </Badge>
             ))}
-          </Box>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Expiries (collapsible) */}
-      <Card sx={{ mb: 1.5 }}>
-        <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-            }}
-            onClick={() => setExpiriesOpen(!expiriesOpen)}
-            id="toggle-expiries"
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <CalendarMonthIcon sx={{ fontSize: 16, color: "secondary.main" }} />
-              <Typography variant="caption" color="text.secondary">
+      {/* Expiries & Strikes Accordion */}
+      <Accordion className="w-full space-y-3">
+        <AccordionItem value="expiries" className="border rounded-lg bg-card/50 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <div className="flex items-center gap-2">
+              <CalendarDays className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs font-medium text-muted-foreground">
                 Expiries ({metadata.expiries.length})
-              </Typography>
-            </Box>
-            <IconButton size="small">
-              {expiriesOpen ? (
-                <ExpandLessIcon fontSize="small" />
-              ) : (
-                <ExpandMoreIcon fontSize="small" />
-              )}
-            </IconButton>
-          </Box>
-          <Collapse in={expiriesOpen}>
-            <Divider sx={{ my: 1 }} />
-            {Object.entries(metadata.expiries_by_instrument).map(
-              ([inst, expiries]) => (
-                <Box key={inst} sx={{ mb: 1.5 }}>
-                  <span className={`instrument-badge ${inst.toLowerCase()}`}>
-                    {inst}
-                  </span>
-                  <Box
-                    sx={{
-                      display: "flex",
-                      gap: 0.5,
-                      flexWrap: "wrap",
-                      mt: 0.5,
-                    }}
-                  >
-                    {expiries.map((exp) => (
-                      <Chip
-                        key={`${inst}-${exp}`}
-                        label={formatExpiry(exp)}
-                        size="small"
-                        sx={{
-                          fontSize: "0.65rem",
-                          height: 22,
-                          backgroundColor: "rgba(148, 163, 184, 0.06)",
-                          color: "text.secondary",
-                        }}
-                      />
-                    ))}
-                  </Box>
-                </Box>
-              )
-            )}
-          </Collapse>
-        </CardContent>
-      </Card>
-
-      {/* Strikes (collapsible) */}
-      <Card>
-        <CardContent sx={{ py: 1.5, px: 2, "&:last-child": { pb: 1.5 } }}>
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              cursor: "pointer",
-            }}
-            onClick={() => setStrikesOpen(!strikesOpen)}
-            id="toggle-strikes"
-          >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <TagIcon sx={{ fontSize: 16, color: "warning.main" }} />
-              <Typography variant="caption" color="text.secondary">
-                Unique Strikes ({metadata.strikes.length})
-              </Typography>
-            </Box>
-            <IconButton size="small">
-              {strikesOpen ? (
-                <ExpandLessIcon fontSize="small" />
-              ) : (
-                <ExpandMoreIcon fontSize="small" />
-              )}
-            </IconButton>
-          </Box>
-          <Collapse in={strikesOpen}>
-            <Divider sx={{ my: 1 }} />
-            {Object.entries(metadata.strikes_by_name).map(
-              ([name, strikes]) =>
-                strikes.length > 0 && (
-                  <Box key={name} sx={{ mb: 1.5 }}>
-                    <Typography
-                      variant="caption"
-                      sx={{ fontWeight: 600, color: "text.secondary", mb: 0.5, display: "block" }}
+              </p>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4">
+            <Separator className="mb-4" />
+            <div className="space-y-4">
+              {Object.entries(metadata.expiries_by_instrument).map(
+                ([inst, expiries]) => (
+                  <div key={inst}>
+                    <Badge
+                      variant="outline"
+                      className={`mb-2 ${
+                        inst === "CE"
+                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          : inst === "PE"
+                          ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                          : "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                      }`}
                     >
-                      {name} ({strikes.length})
-                    </Typography>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: 0.5,
-                        flexWrap: "wrap",
-                        maxHeight: 120,
-                        overflowY: "auto",
-                      }}
-                    >
-                      {strikes.map((s) => (
-                        <Chip
-                          key={`${name}-${s}`}
-                          label={s.toLocaleString()}
-                          size="small"
-                          sx={{
-                            fontSize: "0.65rem",
-                            height: 20,
-                            backgroundColor: "rgba(148, 163, 184, 0.06)",
-                            color: "text.secondary",
-                          }}
-                        />
+                      {inst}
+                    </Badge>
+                    <div className="flex flex-wrap gap-1.5">
+                      {expiries.map((exp) => (
+                        <Badge key={`${inst}-${exp}`} variant="secondary" className="font-normal text-[10px] px-1.5 py-0 h-5">
+                          {formatExpiry(exp)}
+                        </Badge>
                       ))}
-                    </Box>
-                  </Box>
+                    </div>
+                  </div>
                 )
-            )}
-          </Collapse>
-        </CardContent>
-      </Card>
-    </Box>
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="strikes" className="border rounded-lg bg-card/50 px-4">
+          <AccordionTrigger className="hover:no-underline py-3">
+            <div className="flex items-center gap-2">
+              <Tags className="h-4 w-4 text-amber-500/70" />
+              <p className="text-xs font-medium text-muted-foreground">
+                Unique Strikes ({metadata.strikes.length})
+              </p>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-4">
+            <Separator className="mb-4" />
+            <div className="space-y-4">
+              {Object.entries(metadata.strikes_by_name).map(
+                ([name, strikes]) =>
+                  strikes.length > 0 && (
+                    <div key={name}>
+                      <p className="text-[11px] font-semibold text-muted-foreground mb-1.5">
+                        {name} ({strikes.length})
+                      </p>
+                      <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
+                        {strikes.map((s) => (
+                          <Badge key={`${name}-${s}`} variant="secondary" className="font-normal text-[10px] px-1.5 py-0 h-5">
+                            {s.toLocaleString()}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )
+              )}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
+    </div>
   );
 }
