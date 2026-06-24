@@ -3,15 +3,15 @@ Market Data Explorer — Python FastAPI Service
 Handles Feather file I/O, metadata extraction, and data filtering.
 """
 
-import os
 import shutil
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Optional
 
+import numpy as np
 import pandas as pd
 import pyarrow.feather as feather
-from fastapi import FastAPI, File, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, HTTPException, Query, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -33,6 +33,7 @@ async def add_pna_header(request, call_next):
     response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
 
+
 UPLOAD_DIR = Path("uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
@@ -41,20 +42,20 @@ _current_df: Optional[pd.DataFrame] = None
 _current_filename: Optional[str] = None
 
 
-def _get_current_df() -> pd.DataFrame:
-    """Return the currently loaded DataFrame, or raise 400 if none loaded."""
+def get_current_df() -> pd.DataFrame:
+    """FastAPI Dependency to get the currently loaded DataFrame."""
     global _current_df
     if _current_df is None:
         raise HTTPException(
-            status_code=400, detail="No file uploaded yet. Please upload a .feather file first.")
+            status_code=400,
+            detail="No file uploaded yet. Please upload a .feather file first.",
+        )
     return _current_df
 
 
 def _serialize_date(val: Any) -> str:
     """Convert date/datetime objects to ISO string for JSON serialization."""
-    if isinstance(val, datetime):
-        return val.isoformat()
-    if isinstance(val, date):
+    if isinstance(val, (datetime, date)):
         return val.isoformat()
     return str(val)
 
@@ -70,7 +71,7 @@ def _df_to_records(df: pd.DataFrame) -> list[dict]:
                 record[col] = None
             elif isinstance(val, (datetime, date, pd.Timestamp)):
                 record[col] = _serialize_date(val)
-            elif hasattr(val, 'item'):
+            elif hasattr(val, "item"):
                 # Convert numpy types to Python native
                 record[col] = val.item()
             else:
@@ -92,7 +93,9 @@ async def upload_file(file: UploadFile = File(...)):
 
     if not file.filename.endswith(".feather"):
         raise HTTPException(
-            status_code=400, detail="Invalid file format. Only .feather files are accepted.")
+            status_code=400,
+            detail="Invalid file format. Only .feather files are accepted.",
+        )
 
     # Save the uploaded file
     file_path = UPLOAD_DIR / file.filename
@@ -100,8 +103,7 @@ async def upload_file(file: UploadFile = File(...)):
         with open(file_path, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
     except Exception as e:
-        raise HTTPException(
-            status_code=500, detail=f"Failed to save file: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     # Validate and load with PyArrow
     try:
@@ -109,8 +111,7 @@ async def upload_file(file: UploadFile = File(...)):
     except Exception as e:
         # Clean up invalid file
         file_path.unlink(missing_ok=True)
-        raise HTTPException(
-            status_code=400, detail=f"Invalid Feather file: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid Feather file: {str(e)}")
 
     # Validate expected columns
     required_columns = {"instrument_type", "expiry", "strike", "name"}
@@ -119,7 +120,7 @@ async def upload_file(file: UploadFile = File(...)):
         file_path.unlink(missing_ok=True)
         raise HTTPException(
             status_code=400,
-            detail=f"Missing required columns: {', '.join(missing)}. Found columns: {', '.join(df.columns)}"
+            detail=f"Missing required columns: {', '.join(missing)}. Found columns: {', '.join(df.columns)}",
         )
 
     _current_df = df
@@ -133,51 +134,43 @@ async def upload_file(file: UploadFile = File(...)):
 
 
 @app.get("/metadata")
-async def get_metadata():
+async def get_metadata(df: pd.DataFrame = Depends(get_current_df)):
     """
     Return metadata about the uploaded dataset:
     - Instruments, names, expiries (grouped by instrument), strikes (grouped by instrument)
     - Contract counts per instrument type
     """
-    df = _get_current_df()
-
     instruments = sorted(df["instrument_type"].unique().tolist())
     names = sorted(df["name"].unique().tolist())
 
-    # Group expiries by instrument type (key requirement: FUT/CE/PE have different expiries)
-    expiries_by_instrument: dict[str, list[str]] = {}
-    for inst in instruments:
-        inst_df = df[df["instrument_type"] == inst]
-        exp_list = sorted(inst_df["expiry"].unique().tolist())
-        expiries_by_instrument[inst] = [_serialize_date(e) for e in exp_list]
+    # Group expiries by instrument type 
+    expiries_by_instrument = {}
+    for inst, group in df.groupby("instrument_type"):
+        exp_list = sorted(group["expiry"].unique().tolist())
+        expiries_by_instrument[str(inst)] = [_serialize_date(e) for e in exp_list]
 
     # All unique expiries (flat)
     all_expiries = sorted(df["expiry"].unique().tolist())
     all_expiries_str = [_serialize_date(e) for e in all_expiries]
 
     # Group strikes by instrument type (FUT has strike=0)
-    strikes_by_instrument: dict[str, list[float]] = {}
-    for inst in instruments:
-        inst_df = df[df["instrument_type"] == inst]
-        strike_list = sorted(inst_df["strike"].unique().tolist())
-        # Filter out 0.0 strikes for FUT since they're meaningless
+    strikes_by_instrument = {}
+    for inst, group in df.groupby("instrument_type"):
+        strike_list = sorted(group["strike"].unique().tolist())
         if inst == "FUT":
             strike_list = [s for s in strike_list if s != 0.0]
-        strikes_by_instrument[inst] = strike_list
+        strikes_by_instrument[str(inst)] = strike_list
 
     # All unique strikes (excluding 0.0 from FUT)
     all_strikes = sorted(df[df["strike"] > 0]["strike"].unique().tolist())
 
     # Contract counts
-    contract_counts: dict[str, int] = {}
-    for inst in instruments:
-        contract_counts[inst] = int(df[df["instrument_type"] == inst].shape[0])
+    contract_counts = df["instrument_type"].value_counts().to_dict()
 
     # Strikes by name (for the Symbol filter)
-    strikes_by_name: dict[str, list[float]] = {}
-    for name in names:
-        name_df = df[(df["name"] == name) & (df["strike"] > 0)]
-        strikes_by_name[name] = sorted(name_df["strike"].unique().tolist())
+    strikes_by_name = {}
+    for name, group in df[df["strike"] > 0].groupby("name"):
+        strikes_by_name[str(name)] = sorted(group["strike"].unique().tolist())
 
     return {
         "instruments": instruments,
@@ -205,13 +198,12 @@ class FilterRequest(BaseModel):
 
 
 @app.post("/filter")
-async def filter_data(req: FilterRequest):
+async def filter_data(req: FilterRequest, df: pd.DataFrame = Depends(get_current_df)):
     """
     Filter the dataset by instrument type, expiry, strike, and/or name.
     Returns paginated, sorted results.
     """
-    df = _get_current_df()
-    filtered = df.copy()
+    filtered = df
 
     # Apply filters
     if req.instrument:
@@ -220,14 +212,13 @@ async def filter_data(req: FilterRequest):
     if req.expiry:
         try:
             expiry_date = pd.to_datetime(req.expiry).date()
-            # Handle both date and datetime.date expiry columns
-            filtered = filtered[filtered["expiry"].apply(
-                lambda x: x == expiry_date if isinstance(
-                    x, date) else pd.to_datetime(x).date() == expiry_date
-            )]
+            # Fast vectorized expiry date comparison
+            expiry_series = pd.to_datetime(filtered["expiry"]).dt.date
+            filtered = filtered[expiry_series == expiry_date]
         except (ValueError, TypeError):
             raise HTTPException(
-                status_code=400, detail=f"Invalid expiry date format: {req.expiry}")
+                status_code=400, detail=f"Invalid expiry date format: {req.expiry}"
+            )
 
     if req.strike is not None:
         filtered = filtered[filtered["strike"] == req.strike]
@@ -263,22 +254,23 @@ async def preview_data(
     sort_by: Optional[str] = Query(None),
     sort_order: str = Query("asc"),
     search: Optional[str] = Query(None),
+    df: pd.DataFrame = Depends(get_current_df),
 ):
     """
     Return paginated preview of the full dataset.
     Supports sorting and a global search across all string columns.
     """
-    df = _get_current_df()
-    result = df.copy()
+    result = df
 
-    # Global search across string columns
+    # Global search across string columns using fast vectorized approach
     if search and search.strip():
         search_lower = search.strip().lower()
         str_cols = result.select_dtypes(include=["object"]).columns
-        mask = pd.Series(False, index=result.index)
-        for col in str_cols:
-            mask = mask | result[col].astype(
-                str).str.lower().str.contains(search_lower, na=False)
+        
+        # Build a single boolean mask using numpy logic 
+        mask = np.column_stack(
+            [result[col].astype(str).str.lower().str.contains(search_lower, na=False) for col in str_cols]
+        ).any(axis=1)
         result = result[mask]
 
     total = len(result)
@@ -309,4 +301,5 @@ async def health():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)
