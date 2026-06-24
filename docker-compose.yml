@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  python-service:
+    build: ./python-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  backend:
+    build: ./backend
+    ports:
+      - "4000:4000"
+    environment:
+      - PYTHON_SERVICE_URL=http://python-service:8000
+      - GATEWAY_PORT=4000
+    depends_on:
+      - python-service
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:4000
+    depends_on:
+      - backend
+
+volumes:
+  uploads:
