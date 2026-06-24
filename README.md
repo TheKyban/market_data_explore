@@ -7,8 +7,9 @@ A full-stack web application for uploading and interactively exploring derivativ
 ```
 ┌─────────────────────────┐
 │   Next.js Frontend      │  :3000
-│   (TypeScript + MUI +   │
-│    AG Grid Community)   │
+│   (TypeScript +         │
+│    Tailwind + Shadcn UI │
+│    + AG Grid)           │
 └───────────┬─────────────┘
             │ HTTP
             ▼
@@ -31,7 +32,7 @@ A full-stack web application for uploading and interactively exploring derivativ
 
 | Layer         | Technology                                     |
 |---------------|------------------------------------------------|
-| Frontend      | Next.js 16, React 19, TypeScript, MUI v9, AG Grid Community |
+| Frontend      | Next.js 16, React 19, TypeScript, Tailwind CSS, Shadcn UI, AG Grid Community |
 | API Gateway   | Bun, Express 5, TypeScript                     |
 | Data Service  | Python 3.13, FastAPI, Pandas, PyArrow          |
 | Containerization | Docker, Docker Compose                      |
